@@ -1,6 +1,6 @@
 # Apprendimento di Metriche per il Riconoscimento Facciale: Un'Analisi sulla Triplet Loss
 
-**Repository:** [Link alla repo]
+**Repository:** (https://github.com/Andrea-P18/prog_dl2/tree/master)
 
 ---
 
