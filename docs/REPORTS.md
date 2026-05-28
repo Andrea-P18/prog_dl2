@@ -1,6 +1,6 @@
 # Apprendimento di Metriche per il Riconoscimento Facciale: Un'Analisi sulla Triplet Loss
 
-**Repository:** (https://github.com/Andrea-P18/prog_dl2/tree/master)
+**Repository:** [Link alla repo]
 
 ---
 
@@ -30,4 +30,24 @@ L'intero framework è stato sviluppato in PyTorch.
 * *Fase 2 (Metric Learning):* Ottimizzatore Adam ($lr=1 \times 10^{-4}$), Hard Triplet Loss ($\alpha=0.5$), 15 epoche. I layer iniziali del backbone sono stati congelati per tentare di stabilizzare i gradienti derivanti dal mining.
 
 ## 4. Valutazione del Retrieval
-L'inferenza è stata condotta simulando un sistema di ricerca facciale reale: le rappresentazioni estratte sono state passate a un algoritmo K-Nearest Neighbors (K-NN) con metrica
+L'inferenza è stata condotta simulando un sistema di ricerca facciale reale: le rappresentazioni estratte sono state passate a un algoritmo K-Nearest Neighbors (K-NN) con metrica *cosine*, calcolando la Mean Average Precision (mAP) e l'accuratezza ai primi Rank.
+
+| Modello / Metodo | mAP Globale | Rank-1 Acc | Rank-5 Acc | Rank-10 Acc |
+| :--- | :--- | :--- | :--- | :--- |
+| **Fase 1: ResNet-18 (Baseline)** | **0.3872** | **75.67%** | **89.42%** | **93.10%** |
+| Fase 2: Fine-Tuning con Triplet Loss | 0.0406 | 23.28% | 48.20% | 61.62% |
+
+### 4.1 Analisi del Comportamento Anomalo
+Il crollo drastico delle prestazioni (mAP dal 38% al 4%) rappresenta un tipico "edge case" della topologia spaziale forzata ed è ascrivibile a tre fattori congiunti:
+1. **Dinamiche del Batch Size:** Nel Metric Learning, la qualità dell'Hard Mining scala con la grandezza del batch. Un batch size di 32 espone l'ancora a soli 28 negativi possibili. Questi negativi sono spesso facili (easy negatives) e non offrono un gradiente utile, o alternativamente introducono rumore stocastico elevato che distrugge la struttura appresa dalla baseline.
+2. **Backbone Congelato:** Aver impedito l'aggiornamento dei primi layer convoluzionali ha limitato la capacità del modello di ri-adattare l'estrazione delle feature geometriche del viso necessarie per assecondare la spinta violenta dell'equazione di margine.
+3. **Collasso dello Spazio (*Model Collapse*):** Spesso la combinazione di batch limitati e *Batch-Hard mining* induce la rete a schiacciare tutti gli embedding in un singolo punto per minimizzare banalmente la loss spaziale. 
+
+## 5. Cluster Analysis (t-SNE)
+La topologia latente del Test Set è stata analizzata riducendo le dimensioni degli embedding ($d=512$) a uno spazio 2D tramite l'algoritmo t-SNE (con Perplexity=30). 
+Coerentemente con i dati di retrieval, la proiezione post-Triplet Loss mostra una marcata perdita di coesione intra-classe. Le identità non viste in fase di training non riescono a formare cluster densi e si osserva un amalgama disperso causato dalla corruzione dei pesi durante il fine-tuning.
+
+## 6. Conclusioni e Lavori Futuri
+Il progetto dimostra la complessità dell'ottimizzazione metrica pura rispetto ai gradienti più gentili della classificazione classica. Per il futuro, la roadmap prevede:
+* L'implementazione di loss avanzate basate sui margini angolari (come **ArcFace** o **CosFace**), che permettono di addestrare lo spazio latente comportandosi come una Cross-Entropy standard, eliminando la necessità di campionamenti complessi (P-K Sampler) e aggirando i limiti hardware legati alle grandi batch size.
+* Aumento del Batch Size (a 256 o superiore) in combinazione con una strategia di mining *Semi-Hard*, che garantisce gradienti positivi continui senza destabilizzare la rete.
